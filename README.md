@@ -125,6 +125,54 @@ it has the extended CDR logging features (as discussed above).
 
 Install Android Studio to work on this code.
 
+#### Android SDK Setup
+
+A properly configured Android SDK installation is crucial for building the Network Survey app. The build process relies on SDK tools for compiling, packaging, and deploying the application.
+
+1.  **Set Environment Variables:**
+    It's highly recommended to set the `ANDROID_HOME` environment variable to point to your Android SDK installation directory. Some tools might also require `ANDROID_SDK_ROOT` to be set (often to the same path).
+
+    Example (for Linux/macOS, add to your `.bashrc`, `.zshrc`, or equivalent):
+    ```shell
+    export ANDROID_HOME=/path/to/your/android-sdk
+    export ANDROID_SDK_ROOT=/path/to/your/android-sdk
+    # Add SDK tools to your PATH
+    export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+    ```
+    Replace `/path/to/your/android-sdk` with the actual path to your SDK. For Windows, set these variables through the Environment Variables system dialog.
+
+2.  **Install Essential SDK Components:**
+    Use the `sdkmanager` tool (located in `$ANDROID_HOME/cmdline-tools/latest/bin/`) to install the necessary components. The following are required for this project:
+    *   `platform-tools` (provides `adb` and `fastboot`)
+    *   `cmdline-tools;latest` (provides `sdkmanager` and other command-line utilities)
+    *   `build-tools;35.0.0` (specific version of build tools required by the project)
+    *   `platforms;android-35` (Android API level 35, as specified in the project's `build.gradle`)
+
+    Command to install these components:
+    ```shell
+    sdkmanager "platform-tools" "cmdline-tools;latest" "build-tools;35.0.0" "platforms;android-35"
+    ```
+
+3.  **Accept SDK Licenses:**
+    Before the build tools can be used, you must accept the SDK licenses.
+    ```shell
+    sdkmanager --licenses
+    ```
+    To automate the acceptance of all licenses, you can pipe `yes` to the command:
+    ```shell
+    yes | sdkmanager --licenses
+    ```
+    *Note: Ensure `sdkmanager` is accessible via your system's PATH or provide the full path to it.*
+
+#### `google-services.json`
+
+The `google-services.json` file is used for integrating Firebase services, such as Crashlytics and Analytics, into the application. This file is specific to your Firebase project.
+
+*   **`regular` build variant:** If you are building the `regular` (Google Play) variant and wish to use Firebase services, you will need to obtain your own `google-services.json` file from the Firebase console and place it in the `networksurvey/` directory.
+*   **`cdr` build variant:** This file is **not required** if you are building the `cdr` variant, as Firebase services are excluded from this build. It is also not required if you are building the `regular` variant but do not intend to use Firebase.
+
+The build script (`networksurvey/build.gradle`) is configured to automatically include or exclude Firebase plugins based on the presence of the `google-services.json` file and the selected build variant. If the file is missing, the `regular` variant will build without Firebase integration.
+
 ## gRPC Survey Record Streaming
 
 The Network Survey app supports streaming GSM, CDMA, UMTS, LTE, and 802.11 survey records to a gRPC
