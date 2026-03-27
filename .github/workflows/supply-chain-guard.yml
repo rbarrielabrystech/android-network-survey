@@ -29,20 +29,26 @@ jobs:
 
           CHANGED_FILES=$(git diff --name-only "$BASE_SHA"..HEAD -- \
             '**requirements*.txt' '**pyproject.toml' '**poetry.lock' \
-            '**Pipfile.lock' '**uv.lock' '**setup.py' '**setup.cfg' 2>/dev/null || true)
+            '**Pipfile.lock' '**uv.lock' '**setup.py' '**setup.cfg' 2>/dev/null)
 
           for f in $CHANGED_FILES; do
             [ -f "$f" ] || continue
 
-            if grep -qiE 'litellm[>=!~]' "$f"; then
-              if grep -qE 'litellm==1\.78\.2' "$f"; then
-                echo "OK: $f has litellm pinned to safe version 1.78.2"
-              else
+            # Find non-comment lines containing 'litellm', strip inline comments
+            LIT_LINES=$(grep -iE 'litellm' "$f" | grep -viE '^[[:space:]]*#' || true)
+            if [ -n "$LIT_LINES" ]; then
+              ACTIVE_LIT_LINES=$(printf "%s\n" "$LIT_LINES" | sed 's/#.*$//')
+              # Any active litellm line not pinned to the safe version is unsafe.
+              # Supports extras (e.g., litellm[proxy]) and whitespace variations.
+              UNSAFE_LINES=$(printf "%s\n" "$ACTIVE_LIT_LINES" | grep -viE '(^|[^[:alnum:]_])litellm(\[[^]]+\])?[[:space:]]*==[[:space:]]*1[.]78[.]2([^[:alnum:]_.]|$)' || true)
+              if [ -n "$UNSAFE_LINES" ]; then
                 echo "BLOCKED: $f contains litellm dependency NOT pinned to ==1.78.2"
                 echo "  litellm 1.82.7/1.82.8 are compromised (TeamPCP, Mar 2026)"
                 echo "  Pin to litellm==1.78.2 or remove the dependency"
-                grep -n 'litellm' "$f" || true
+                grep -n '[Ll]itellm' "$f" || true
                 BLOCKED=1
+              else
+                echo "OK: $f has litellm pinned to safe version 1.78.2"
               fi
             fi
           done
